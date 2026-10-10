@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
 /* Layout: sticky header with three tabs; map beside a detail panel on wide screens, stacked on phones. Signage-blue accent on cool asphalt greys; severity colours stay separate from the accent. */
 :root {
@@ -85,15 +86,20 @@ textarea.field, .complaint textarea { width: 100%; border: 1px solid var(--line)
 .stack { display: grid; gap: 10px; min-width: 0; }
 .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
 .toolbar select { border: 1px solid var(--line); background: var(--surface); border-radius: 9px; padding: 8px 10px; min-height: 40px; max-width: 100%; }
-.mapbox { position: relative; height: clamp(340px, 62vh, 620px); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; touch-action: none; background: var(--land); cursor: grab; }
-.mapbox.small { height: 300px; cursor: crosshair; }
-.mapbox svg { display: block; width: 100%; height: 100%; user-select: none; -webkit-user-select: none; }
+.mapbox { position: relative; isolation: isolate; height: clamp(420px, 72vh, 680px); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--land); }
+.mapbox.small { height: 300px; }
+.mapbox.small .leaflet-container { cursor: crosshair; }
+.leaflet-host { position: absolute; inset: 0; }
+.leaflet-container { font-family: var(--body); background: var(--land); }
+.leaflet-container a { color: var(--accent); }
+.leaflet-control-attribution { font-size: 11px; }
+.map-fail { margin: 0; padding: 16px; color: var(--ink-soft); }
 .maplabel { fill: var(--ink); font-family: var(--body); font-weight: 600; paint-order: stroke; stroke: var(--land); stroke-linejoin: round; pointer-events: none; }
 .maplabel.road { fill: var(--ink-soft); font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; }
-.ctrl { position: absolute; display: grid; gap: 4px; }
+.ctrl { position: absolute; display: grid; gap: 4px; z-index: 900; }
 .zoom { top: 10px; right: 10px; }
 .zoom button { width: 38px; height: 38px; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; font-size: 20px; line-height: 1; cursor: pointer; font-weight: 600; }
-.legend { left: 10px; bottom: 10px; grid-auto-flow: column; gap: 12px; background: color-mix(in srgb, var(--surface) 92%, transparent); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; font-size: 12px; font-weight: 600; pointer-events: none; }
+.legend { left: 10px; top: 10px; grid-auto-flow: column; gap: 12px; background: color-mix(in srgb, var(--surface) 92%, transparent); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; font-size: 12px; font-weight: 600; pointer-events: none; }
 .legend span { display: inline-flex; align-items: center; gap: 5px; }
 .legend i { width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
 .legend i.ring { background: var(--surface); border: 2px solid var(--ink-soft); width: 11px; height: 11px; }
@@ -182,6 +188,12 @@ textarea.field, .complaint textarea { width: 100%; border: 1px solid var(--line)
     <div class="split">
       <div class="stack">
         <div class="toolbar">
+          <div class="seg" id="filter-seg" role="group" aria-label="Filter by severity">
+            <button data-f="all" aria-pressed="true">All</button>
+            <button data-f="severe" aria-pressed="false">Severe</button>
+            <button data-f="moderate" aria-pressed="false">Moderate</button>
+            <button data-f="minor" aria-pressed="false">Minor</button>
+          </div>
           <div class="seg" role="group" aria-label="Map layer">
             <button id="layer-pins" aria-pressed="true">Pins</button>
             <button id="layer-heat" aria-pressed="false">Heat map</button>
@@ -189,11 +201,10 @@ textarea.field, .complaint textarea { width: 100%; border: 1px solid var(--line)
           <label><span class="sr">Jump to a locality</span><select id="jump-map"></select></label>
         </div>
         <div class="mapbox" id="map-main">
-          <svg role="img" aria-label="Schematic map of Bengaluru with reported road hazards"></svg>
-          <div class="ctrl zoom"><button data-zoom="in" aria-label="Zoom in">+</button><button data-zoom="out" aria-label="Zoom out">&minus;</button><button data-zoom="reset" aria-label="Show whole city" style="font-size:14px">All</button></div>
+          <div class="leaflet-host" role="application" aria-label="Map of Bengaluru with reported road hazards"></div>
           <div class="ctrl legend"><span style="--c:var(--minor)"><i></i>Minor</span><span style="--c:var(--moderate)"><i></i>Moderate</span><span style="--c:var(--severe)"><i></i>Severe</span><span><i class="ring"></i>Fixed</span></div>
         </div>
-        <p class="hint">Drag to pan, use + and &minus; to zoom (Ctrl + scroll on desktop). Schematic map, roads are approximate.</p>
+        <p class="hint">Drag to pan, pinch or use + and &minus; to zoom. Tap a pin to see its photo. Map data from OpenStreetMap contributors and others.</p>
       </div>
       <aside id="detail" class="card detail" aria-live="polite"></aside>
     </div>
@@ -238,8 +249,7 @@ textarea.field, .complaint textarea { width: 100%; border: 1px solid var(--line)
         <p class="hint" id="geo-msg" role="status" style="margin-top:6px"></p>
         <div class="chips" id="chips" aria-label="Jump to a locality"></div>
         <div class="mapbox small" id="map-pick">
-          <svg role="img" aria-label="Map for placing a pin"></svg>
-          <div class="ctrl zoom"><button data-zoom="in" aria-label="Zoom in">+</button><button data-zoom="out" aria-label="Zoom out">&minus;</button><button data-zoom="reset" aria-label="Show whole city" style="font-size:14px">All</button></div>
+          <div class="leaflet-host" role="application" aria-label="Map for placing a pin"></div>
         </div>
         <p class="hint mono" id="coords" style="margin-top:8px">No pin yet</p>
         <div class="note" id="dup-note" hidden role="status"></div>
@@ -292,6 +302,8 @@ textarea.field, .complaint textarea { width: 100%; border: 1px solid var(--line)
   </div>
 </div>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 <script>
 /* ---------- Core logic: sample images, severity estimate, geo helpers ---------- */
 function mulberry(seed) {
@@ -377,12 +389,6 @@ function analyzeSeverity(d, n) {
   const $$ = (s, el) => Array.from((el || document).querySelectorAll(s));
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-  /* Projection: a flat map of Bengaluru, 1 world unit is about 55.7 m */
-  const K = 2000, LAT0 = 13.15, LNG0 = 77.45, COS = Math.cos(13 * Math.PI / 180);
-  const W = 0.35 * COS * K, H = 0.35 * K, M_PER_UNIT = 111320 / K;
-  const proj = (lat, lng) => [(lng - LNG0) * COS * K, (LAT0 - lat) * K];
-  const unproj = (x, y) => [LAT0 - y / K, LNG0 + x / (COS * K)];
-
   const LOC = [
     { name: 'Koramangala', lat: 12.9352, lng: 77.6245 },
     { name: 'Indiranagar', lat: 12.9784, lng: 77.6408 },
@@ -399,16 +405,6 @@ function analyzeSeverity(d, n) {
     { name: 'Malleshwaram', lat: 13.0035, lng: 77.5710 },
     { name: 'Banashankari', lat: 12.9255, lng: 77.5468 }
   ];
-  /* Approximate alignments, drawn for orientation only */
-  const ROADS = [
-    { name: 'Outer Ring Road', w: 4, label: 2, pts: [[13.0358, 77.597], [13.045, 77.625], [13.01, 77.696], [12.956, 77.701], [12.926, 77.676], [12.9177, 77.6228]] },
-    { name: 'Hosur Road', w: 3, label: 1, pts: [[12.977, 77.572], [12.9177, 77.6228], [12.845, 77.66]] },
-    { name: 'Old Madras Road', w: 3, label: 1, pts: [[12.978, 77.6408], [13.0, 77.696], [12.9698, 77.75]] },
-    { name: 'Bellary Road', w: 3, label: 1, pts: [[12.977, 77.572], [13.0358, 77.597], [13.1007, 77.5963]] },
-    { name: 'Tumkur Road', w: 3, label: 1, pts: [[12.977, 77.572], [13.0035, 77.571], [13.04, 77.52]] },
-    { name: 'Mysore Road', w: 3, label: 1, pts: [[12.977, 77.572], [12.96, 77.52]] }
-  ];
-
   const SEV = {
     minor: { label: 'Minor', w: 1, v: '--minor' },
     moderate: { label: 'Moderate', w: 2, v: '--moderate' },
@@ -537,149 +533,92 @@ function analyzeSeverity(d, n) {
     catch (err) { ta.focus(); ta.select(); flash(b, 'Selected, press Ctrl+C'); }
   });
 
-  /* ---------- Map ---------- */
-  let uid = 0;
+  /* ---------- Map (Leaflet + OpenStreetMap) ---------- */
+  const BLR = [12.9716, 77.5946];
+  const cssv = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
   function createMap(host, opt) {
-    const id = ++uid, svg = $('svg', host);
-    const view = { cx: W / 2, cy: H / 2, z: 1 };
-    const st = { scale: 1, sc0: 1, x0: 0, y0: 0, vw: W, vh: H };
+    const el = $('.leaflet-host', host);
+    if (!window.L) {
+      el.innerHTML = '<p class="map-fail">The map could not load. Check your internet connection and reload the page.</p>';
+      return { render() {}, flyTo() {}, reset() {} };
+    }
+    const map = L.map(el, { zoomControl: false, minZoom: 9, maxZoom: 19, zoomSnap: 0.25, scrollWheelZoom: false }).setView(BLR, 11);
+    /* the page scrolls normally over the map; scroll-zoom switches on after a click on the map */
+    map.on('click', () => map.scrollWheelZoom.enable());
+    el.addEventListener('mouseleave', () => map.scrollWheelZoom.disable());
+    map.on('zoomend', () => render());
+    map.attributionControl.setPrefix(false);
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+    /* OpenStreetMap's own tile server refuses pages opened from a local file (no referrer), so those get Esri street tiles instead */
+    if (/^https?:$/.test(location.protocol)) {
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'
+      }).addTo(map);
+    } else {
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 18, maxNativeZoom: 17, attribution: 'Tiles &copy; Esri, HERE, Garmin, OpenStreetMap contributors'
+      }).addTo(map);
+      map.setMaxZoom(18); /* Esri has no street detail over Bengaluru beyond about zoom 17 */
+    }
+    const CITY = L.latLngBounds(LOC.map((l) => [l.lat, l.lng])).pad(0.12);
+    const fitCity = () => map.fitBounds(CITY, { padding: [10, 10], animate: false });
+    const marks = L.layerGroup().addTo(map), pinLayer = L.layerGroup().addTo(map);
+    let heatLayer = null, sized = false;
+    map.on('click', (e) => {
+      if (opt.mode === 'pick') opt.onPick(e.latlng.lat, e.latlng.lng);
+      else opt.onSelect(null);
+    });
 
     function render() {
-      const rect = host.getBoundingClientRect();
-      const dw = rect.width || 360, dh = rect.height || 340;
-      st.sc0 = Math.min(dw / W, dh / H);
-      st.scale = st.sc0 * view.z;
-      st.vw = dw / st.scale; st.vh = dh / st.scale;
-      view.cx = Math.max(0, Math.min(W, view.cx)); view.cy = Math.max(0, Math.min(H, view.cy));
-      st.x0 = view.cx - st.vw / 2; st.y0 = view.cy - st.vh / 2;
-      svg.setAttribute('viewBox', st.x0 + ' ' + st.y0 + ' ' + st.vw + ' ' + st.vh);
-      const px = (n) => n / st.scale;
-      const f = (n) => n.toFixed(2);
-      let s = '<defs><radialGradient id="hg' + id + '"><stop offset="0" style="stop-color:var(--heat);stop-opacity:.6"/><stop offset="1" style="stop-color:var(--heat);stop-opacity:0"/></radialGradient></defs>';
-      s += '<rect x="' + (-W) + '" y="' + (-H) + '" width="' + 3 * W + '" height="' + 3 * H + '" style="fill:var(--land)"/>';
-      for (const rd of ROADS) {
-        const pts = rd.pts.map((p) => proj(p[0], p[1]).map(f).join(',')).join(' ');
-        s += '<polyline points="' + pts + '" fill="none" style="stroke:var(--road-edge)" stroke-width="' + (rd.w + 2.5) + '" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>';
-        s += '<polyline points="' + pts + '" fill="none" style="stroke:var(--road)" stroke-width="' + rd.w + '" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>';
-      }
-      if (view.z < 3.5) {
-        for (const rd of ROADS) {
-          const p = rd.pts[rd.label];
-          const q = proj(p[0], p[1]);
-          s += '<text class="maplabel road" x="' + f(q[0] + px(6)) + '" y="' + f(q[1] - px(6)) + '" font-size="' + px(9.5) + '" stroke-width="' + px(3) + '">' + esc(rd.name) + '</text>';
-        }
-      }
-      if (view.z < 9) {
-        for (const l of LOC) {
-          const q = proj(l.lat, l.lng);
-          s += '<rect x="' + f(q[0] - px(2.5)) + '" y="' + f(q[1] - px(2.5)) + '" width="' + px(5) + '" height="' + px(5) + '" style="fill:var(--ink-soft)"/>';
-          s += '<text class="maplabel" x="' + f(q[0] + px(6)) + '" y="' + f(q[1] + px(4)) + '" font-size="' + px(11) + '" stroke-width="' + px(3) + '">' + esc(l.name) + '</text>';
-        }
-      }
+      map.invalidateSize();
+      if (!sized && map.getSize().x > 0) { sized = true; fitCity(); }
+      marks.clearLayers(); pinLayer.clearLayers();
+      if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
+      const col = { minor: cssv('--minor'), moderate: cssv('--moderate'), severe: cssv('--severe') };
+      const surface = cssv('--surface'), accent = cssv('--accent');
       const list = opt.getReports().slice().sort((a, b) => prio(a) - prio(b));
       const heat = opt.heat && opt.heat();
       if (heat) {
-        for (const r of list) {
-          if (!isOpen(r)) continue;
-          const q = proj(r.lat, r.lng);
-          s += '<circle cx="' + f(q[0]) + '" cy="' + f(q[1]) + '" r="' + px(30 + SEV[r.severity].w * 9 + Math.min(r.conf, 10) * 1.5) + '" fill="url(#hg' + id + ')"/>';
+        const open = list.filter(isOpen);
+        if (L.heatLayer) {
+          heatLayer = L.heatLayer(open.map((r) => [r.lat, r.lng, 0.3 + 0.7 * Math.min(1, prio(r) / 16)]), {
+            radius: 32, blur: 24, maxZoom: 15, gradient: { 0.3: '#ffd166', 0.6: '#ef8a3b', 1: '#c23b25' }
+          }).addTo(map);
+        } else {
+          open.forEach((r) => L.circleMarker([r.lat, r.lng], { radius: 26, stroke: false, fillColor: cssv('--heat'), fillOpacity: 0.25, interactive: false }).addTo(marks));
         }
       }
       const sel = opt.getSelected && opt.getSelected();
+      const browse = opt.mode !== 'pick';
+      const zf = Math.max(0.55, Math.min(1, 0.55 + (map.getZoom() - 9) * 0.15)); /* smaller pins when zoomed out */
       for (const r of list) {
-        const q = proj(r.lat, r.lng), open = isOpen(r);
-        const rad = px(heat ? 3.5 : 5.5 + Math.min(r.conf, 8) * 0.7);
-        const col = 'var(' + SEV[r.severity].v + ')';
-        s += '<g data-id="' + r.id + '" style="cursor:pointer">';
-        if (sel === r.id) s += '<circle cx="' + f(q[0]) + '" cy="' + f(q[1]) + '" r="' + (rad + px(5)) + '" fill="none" style="stroke:var(--accent)" stroke-width="2.5" vector-effect="non-scaling-stroke"/>';
-        if (open) s += '<circle cx="' + f(q[0]) + '" cy="' + f(q[1]) + '" r="' + rad + '" style="fill:' + col + ';stroke:var(--surface)" stroke-width="2" vector-effect="non-scaling-stroke"/>';
-        else s += '<circle cx="' + f(q[0]) + '" cy="' + f(q[1]) + '" r="' + rad + '" style="fill:var(--surface);stroke:' + col + '" stroke-width="2.5" vector-effect="non-scaling-stroke"/>';
-        s += '<circle cx="' + f(q[0]) + '" cy="' + f(q[1]) + '" r="' + px(15) + '" fill="transparent"/></g>';
+        const open = isOpen(r), c = col[r.severity], rad = heat ? 4 : (7 + Math.min(r.conf, 8) * 0.8) * zf;
+        if (sel === r.id) L.circleMarker([r.lat, r.lng], { radius: rad + 6, color: accent, weight: 3, fill: false, interactive: false }).addTo(marks);
+        const m = L.circleMarker([r.lat, r.lng], {
+          radius: rad, color: open ? surface : c, weight: open ? 2.5 : 3, fillColor: open ? c : surface, fillOpacity: 1,
+          bubblingMouseEvents: false, interactive: browse
+        }).addTo(marks);
+        if (browse) m.on('click', () => opt.onSelect(r.id));
       }
       const pin = opt.getPin && opt.getPin();
       if (pin) {
-        const q = proj(pin.lat, pin.lng);
-        const dupR = 25 / M_PER_UNIT;
-        if (pin.acc) {
-          const accR = pin.acc / M_PER_UNIT;
-          if (accR * st.scale >= 12) s += '<circle cx="' + f(q[0]) + '" cy="' + f(q[1]) + '" r="' + accR + '" style="fill:var(--accent);fill-opacity:.08;stroke:var(--accent)" stroke-width="1" stroke-dasharray="2 3" vector-effect="non-scaling-stroke"/>';
-        }
-        if (dupR * st.scale >= 6) s += '<circle cx="' + f(q[0]) + '" cy="' + f(q[1]) + '" r="' + dupR + '" fill="none" style="stroke:var(--accent)" stroke-width="1.5" stroke-dasharray="5 4" vector-effect="non-scaling-stroke"/>';
-        s += '<circle cx="' + f(q[0]) + '" cy="' + f(q[1]) + '" r="' + px(10) + '" style="fill:var(--accent);fill-opacity:.2;stroke:var(--accent)" stroke-width="2.5" vector-effect="non-scaling-stroke"/>';
-        s += '<circle cx="' + f(q[0]) + '" cy="' + f(q[1]) + '" r="' + px(3) + '" style="fill:var(--accent)"/>';
+        if (pin.acc) L.circle([pin.lat, pin.lng], { radius: pin.acc, color: accent, weight: 1, dashArray: '2 4', fillColor: accent, fillOpacity: 0.08, interactive: false }).addTo(pinLayer);
+        L.circle([pin.lat, pin.lng], { radius: 25, color: accent, weight: 1.5, dashArray: '5 4', fill: false, interactive: false }).addTo(pinLayer);
+        L.circleMarker([pin.lat, pin.lng], { radius: 10, color: accent, weight: 3, fillColor: accent, fillOpacity: 0.25, interactive: false }).addTo(pinLayer);
+        L.circleMarker([pin.lat, pin.lng], { radius: 3, stroke: false, fillColor: accent, fillOpacity: 1, interactive: false }).addTo(pinLayer);
       }
-      svg.innerHTML = s;
     }
-
-    function zoomAt(factor, cx, cy) {
-      const rect = host.getBoundingClientRect();
-      const ox = cx - rect.left, oy = cy - rect.top;
-      const wx = st.x0 + ox / st.scale, wy = st.y0 + oy / st.scale;
-      view.z = Math.max(1, Math.min(18, view.z * factor));
-      const sc = st.sc0 * view.z, vw = rect.width / sc, vh = rect.height / sc;
-      view.cx = wx - ox / sc + vw / 2; view.cy = wy - oy / sc + vh / 2;
-      render();
-    }
-    function flyTo(lat, lng, z) {
-      const p = proj(lat, lng); view.cx = p[0]; view.cy = p[1]; view.z = z || 8; render();
-    }
-    function toLatLng(cx, cy) {
-      const rect = host.getBoundingClientRect();
-      return unproj(st.x0 + (cx - rect.left) / st.scale, st.y0 + (cy - rect.top) / st.scale);
-    }
-    function tap(e) {
-      if (opt.mode === 'pick') { const p = toLatLng(e.clientX, e.clientY); opt.onPick(p[0], p[1]); return; }
-      const el = document.elementFromPoint(e.clientX, e.clientY);
-      const g = el && el.closest ? el.closest('[data-id]') : null;
-      opt.onSelect(g ? g.getAttribute('data-id') : null);
-    }
-
-    const ptrs = new Map(); let moved = 0, lastDist = 0;
-    const dist = () => { const a = Array.from(ptrs.values()); return Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y); };
-    host.addEventListener('pointerdown', (e) => {
-      if (e.target.closest('.ctrl')) return;
-      try { host.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
-      ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      if (ptrs.size === 1) moved = 0;
-      if (ptrs.size === 2) lastDist = dist();
-    });
-    host.addEventListener('pointermove', (e) => {
-      const p = ptrs.get(e.pointerId);
-      if (!p) return;
-      const dx = e.clientX - p.x, dy = e.clientY - p.y;
-      p.x = e.clientX; p.y = e.clientY;
-      if (ptrs.size === 1) {
-        moved += Math.abs(dx) + Math.abs(dy);
-        if (moved > 6) { view.cx -= dx / st.scale; view.cy -= dy / st.scale; render(); }
-      } else if (ptrs.size === 2) {
-        const d = dist(), a = Array.from(ptrs.values());
-        if (lastDist > 0) zoomAt(d / lastDist, (a[0].x + a[1].x) / 2, (a[0].y + a[1].y) / 2);
-        lastDist = d; moved = 99;
-      }
-    });
-    const end = (e, allowTap) => {
-      const was = ptrs.size; ptrs.delete(e.pointerId);
-      if (allowTap && was === 1 && moved <= 6) tap(e);
-    };
-    host.addEventListener('pointerup', (e) => end(e, true));
-    host.addEventListener('pointercancel', (e) => end(e, false));
-    host.addEventListener('wheel', (e) => {
-      if (!(e.ctrlKey || e.metaKey)) return;
-      e.preventDefault(); zoomAt(e.deltaY < 0 ? 1.25 : 0.8, e.clientX, e.clientY);
-    }, { passive: false });
-    $$('[data-zoom]', host).forEach((b) => b.addEventListener('click', () => {
-      const rect = host.getBoundingClientRect(), z = b.dataset.zoom;
-      if (z === 'reset') { view.cx = W / 2; view.cy = H / 2; view.z = 1; render(); }
-      else zoomAt(z === 'in' ? 1.6 : 0.625, rect.left + rect.width / 2, rect.top + rect.height / 2);
-    }));
+    function flyTo(lat, lng, z) { map.setView([lat, lng], z || 14); render(); }
+    function reset() { fitCity(); render(); }
     if (window.ResizeObserver) new ResizeObserver(() => render()).observe(host);
-    return { render, flyTo };
+    if (window.matchMedia) { try { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', render); } catch (e) { /* older browsers */ } }
+    return { render, flyTo, reset };
   }
 
   /* ---------- Map tab ---------- */
-  let selectedId = null, heatOn = false;
+  let selectedId = null, heatOn = false, sevFilter = 'all';
   const mainMap = createMap($('#map-main'), {
-    mode: 'browse', getReports: () => reports, heat: () => heatOn, getSelected: () => selectedId,
+    mode: 'browse', getReports: () => reports.filter((r) => sevFilter === 'all' || r.severity === sevFilter), heat: () => heatOn, getSelected: () => selectedId,
     onSelect: (id) => { selectedId = id; mainMap.render(); renderDetail(); if (id) openPhoto(id); }
   });
   $('#layer-pins').addEventListener('click', () => setHeat(false));
@@ -691,8 +630,17 @@ function analyzeSeverity(d, n) {
     mainMap.render();
   }
   const jump = $('#jump-map');
-  jump.innerHTML = '<option value="">Jump to a locality</option>' + LOC.map((l, i) => '<option value="' + i + '">' + esc(l.name) + '</option>').join('');
-  jump.addEventListener('change', () => { if (jump.value !== '') { const l = LOC[+jump.value]; mainMap.flyTo(l.lat, l.lng, 8); } });
+  jump.innerHTML = '<option value="">Jump to a locality</option><option value="all">Whole city</option>' + LOC.map((l, i) => '<option value="' + i + '">' + esc(l.name) + '</option>').join('');
+  jump.addEventListener('change', () => {
+    if (jump.value === 'all') mainMap.reset();
+    else if (jump.value !== '') { const l = LOC[+jump.value]; mainMap.flyTo(l.lat, l.lng, 14); }
+  });
+  $('#filter-seg').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    sevFilter = b.dataset.f;
+    $$('#filter-seg button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    mainMap.render();
+  });
 
   function renderDetail() {
     const box = $('#detail'), r = byId(selectedId);
@@ -787,7 +735,7 @@ function analyzeSeverity(d, n) {
     onPick: (lat, lng) => setPin(lat, lng)
   });
   $('#chips').innerHTML = LOC.map((l, i) => '<button class="chip" data-i="' + i + '">' + esc(l.name) + '</button>').join('');
-  $('#chips').addEventListener('click', (e) => { const b = e.target.closest('.chip'); if (b) { const l = LOC[+b.dataset.i]; pickMap.flyTo(l.lat, l.lng, 8); } });
+  $('#chips').addEventListener('click', (e) => { const b = e.target.closest('.chip'); if (b) { const l = LOC[+b.dataset.i]; pickMap.flyTo(l.lat, l.lng, 14); } });
 
   async function reverseGeocode(lat, lng) {
     try {
@@ -830,7 +778,7 @@ function analyzeSeverity(d, n) {
         const la = p.coords.latitude, ln = p.coords.longitude, acc = Math.max(1, Math.round(p.coords.accuracy || 0));
         if (la < 12.75 || la > 13.25 || ln < 77.35 || ln > 77.9) { say(m, 'Your location is outside Bengaluru, so it cannot be shown on this map. Tap the map to drop a pin instead.'); return; }
         say(m, 'Location found, accurate to about ' + acc + ' m.' + (acc > 50 ? ' Zoom in and tap to move the pin if it looks off.' : ''));
-        pickMap.flyTo(la, ln, acc > 100 ? 10 : 13); setPin(la, ln, acc);
+        pickMap.flyTo(la, ln, acc > 100 ? 15 : 17); setPin(la, ln, acc);
       }, onFail, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
     } catch (e) { onFail(null); }
   }
@@ -864,7 +812,7 @@ function analyzeSeverity(d, n) {
       complaintCard(target, false) +
       '<div class="row"><button class="btn primary" id="view-on-map">View on map</button><button class="btn ghost" id="another">Report another</button></div>';
     $('#result').scrollIntoView({ block: 'start' });
-    $('#view-on-map').onclick = () => { selectedId = target.id; show('map'); mainMap.flyTo(target.lat, target.lng, 9); renderDetail(); };
+    $('#view-on-map').onclick = () => { selectedId = target.id; show('map'); mainMap.flyTo(target.lat, target.lng, 16); renderDetail(); };
     $('#another').onclick = resetDraft;
   });
   function resetDraft() {
@@ -900,7 +848,7 @@ function analyzeSeverity(d, n) {
   }
   $('#rank').addEventListener('click', (e) => {
     const b = e.target.closest('[data-loc]'); if (!b) return;
-    const l = LOC.find((x) => x.name === b.dataset.loc); show('map'); mainMap.flyTo(l.lat, l.lng, 8);
+    const l = LOC.find((x) => x.name === b.dataset.loc); show('map'); mainMap.flyTo(l.lat, l.lng, 14);
   });
   $('#esc-list').addEventListener('click', (e) => {
     const b = e.target.closest('[data-esc]'); if (!b) return;
