@@ -1,0 +1,957 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>PotholeWatch Bengaluru</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: sticky header with three tabs; map beside a detail panel on wide screens, stacked on phones. Signage-blue accent on cool asphalt greys; severity colours stay separate from the accent. */
+:root {
+  --bg: #edf0ee; --surface: #ffffff; --ink: #1b2427; --ink-soft: #55646a; --line: #d0d8d5;
+  --land: #e2e7e3; --road: #fbfcfb; --road-edge: #b6c0bb;
+  --accent: #1d4e89; --accent-ink: #ffffff;
+  --minor: #2c8454; --moderate: #b97d05; --severe: #c23b25; --heat: #e0532a;
+  --s-rep: #8c999d; --s-ack: #5e86b8; --s-prog: #1d4e89; --s-fix: #2c8454;
+  --display: 'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;
+  --body: 'Barlow', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12181a; --surface: #1b2326; --ink: #e8eeec; --ink-soft: #9baaad; --line: #2c393c;
+    --land: #1e282b; --road: #3b4c52; --road-edge: #172023;
+    --accent: #7db0ee; --accent-ink: #0b1a2b;
+    --minor: #4fc080; --moderate: #e3aa30; --severe: #f06c54; --heat: #ff7a4d;
+    --s-rep: #7d8b8f; --s-ack: #6f9ad0; --s-prog: #7db0ee; --s-fix: #4fc080;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12181a; --surface: #1b2326; --ink: #e8eeec; --ink-soft: #9baaad; --line: #2c393c;
+  --land: #1e282b; --road: #3b4c52; --road-edge: #172023;
+  --accent: #7db0ee; --accent-ink: #0b1a2b;
+  --minor: #4fc080; --moderate: #e3aa30; --severe: #f06c54; --heat: #ff7a4d;
+  --s-rep: #7d8b8f; --s-ack: #6f9ad0; --s-prog: #7db0ee; --s-fix: #4fc080;
+  color-scheme: dark;
+}
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.5; }
+* { box-sizing: border-box; }
+button, input, select, textarea { font: inherit; color: inherit; }
+.app { max-width: 1040px; margin: 0 auto; padding-inline: 16px; padding-block: 0 48px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+h1, h2, .num { font-family: var(--display); font-weight: 700; letter-spacing: 0.01em; }
+h2 { margin: 0; text-wrap: balance; }
+.h-sm { font-size: 22px; line-height: 1.15; margin-bottom: 4px; }
+.mono { font-family: var(--mono); font-size: 12.5px; }
+.muted { color: var(--ink-soft); margin: 4px 0 0; }
+.lbl { display: block; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); margin: 14px 0 6px; }
+
+/* header + tabs */
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--bg); padding-block: 12px 10px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; border-bottom: 1px solid var(--line); }
+.brand { display: flex; align-items: baseline; gap: 10px; }
+.brand h1 { margin: 0; font-size: 28px; line-height: 1; }
+.brand span { font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.14em; color: var(--ink-soft); }
+.tabs { display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 3px; }
+.tabs button { border: 0; background: transparent; padding: 7px 14px; border-radius: 7px; cursor: pointer; font-weight: 600; color: var(--ink-soft); }
+.tabs button[aria-selected="true"] { background: var(--accent); color: var(--accent-ink); }
+button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible, a:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.view { padding-top: 16px; display: grid; gap: 16px; }
+
+/* shared parts */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; min-width: 0; }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 9px 14px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; min-height: 40px; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.ghost:hover { border-color: var(--ink-soft); }
+.btn.sm { min-height: 34px; padding: 5px 10px; font-size: 13.5px; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; background: var(--surface); }
+.seg.wrap { flex-wrap: wrap; }
+.seg button { border: 0; background: transparent; padding: 8px 13px; cursor: pointer; font-weight: 600; color: var(--ink-soft); min-height: 38px; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.pill { display: inline-flex; align-items: center; gap: 7px; padding: 3px 10px 3px 8px; border-radius: 99px; font-weight: 600; font-size: 13px; background: color-mix(in srgb, var(--c) 16%, var(--surface)); border: 1px solid color-mix(in srgb, var(--c) 45%, var(--surface)); }
+.pill i { width: 9px; height: 9px; border-radius: 50%; background: var(--c); }
+.field { width: 100%; border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 9px 11px; min-height: 40px; }
+textarea.field, .complaint textarea { width: 100%; border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 10px; font-family: var(--mono); font-size: 12.5px; line-height: 1.55; resize: vertical; }
+.hint { color: var(--ink-soft); font-size: 13px; margin: 0; }
+
+/* map */
+.split { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.stack { display: grid; gap: 10px; min-width: 0; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+.toolbar select { border: 1px solid var(--line); background: var(--surface); border-radius: 9px; padding: 8px 10px; min-height: 40px; max-width: 100%; }
+.mapbox { position: relative; height: clamp(340px, 62vh, 620px); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; touch-action: none; background: var(--land); cursor: grab; }
+.mapbox.small { height: 300px; cursor: crosshair; }
+.mapbox svg { display: block; width: 100%; height: 100%; user-select: none; -webkit-user-select: none; }
+.maplabel { fill: var(--ink); font-family: var(--body); font-weight: 600; paint-order: stroke; stroke: var(--land); stroke-linejoin: round; pointer-events: none; }
+.maplabel.road { fill: var(--ink-soft); font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; }
+.ctrl { position: absolute; display: grid; gap: 4px; }
+.zoom { top: 10px; right: 10px; }
+.zoom button { width: 38px; height: 38px; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; font-size: 20px; line-height: 1; cursor: pointer; font-weight: 600; }
+.legend { left: 10px; bottom: 10px; grid-auto-flow: column; gap: 12px; background: color-mix(in srgb, var(--surface) 92%, transparent); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; font-size: 12px; font-weight: 600; pointer-events: none; }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.legend i { width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
+.legend i.ring { background: var(--surface); border: 2px solid var(--ink-soft); width: 11px; height: 11px; }
+.detail { display: grid; gap: 0; align-content: start; }
+.d-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; }
+.big { margin: 8px 0 0; font-size: 16px; }
+.big .num { font-size: 34px; }
+.thumb { display: block; width: 96px; height: 96px; border-radius: 8px; margin-top: 12px; object-fit: cover; border: 1px solid var(--line); }
+.thumb.ph { display: grid; place-items: center; text-align: center; font-size: 12px; color: var(--ink-soft); padding: 6px; background: repeating-linear-gradient(135deg, var(--bg) 0 8px, var(--land) 8px 16px); }
+.facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 14px 0 0; }
+.facts div { border-top: 2px solid var(--line); padding-top: 6px; }
+.facts dt { font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); font-weight: 600; }
+.facts dd { margin: 0; font-family: var(--display); font-weight: 700; font-size: 22px; line-height: 1.2; }
+
+/* report flow */
+.steps { display: grid; gap: 16px; max-width: 720px; width: 100%; margin-inline: auto; }
+.step h2 { font-size: 24px; display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.n { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-size: 16px; }
+.upload { position: relative; overflow: hidden; }
+.upload input { position: absolute; inset: 0; opacity: 0; cursor: pointer; font-size: 0; }
+#preview { display: block; width: 100%; max-width: 260px; aspect-ratio: 1; border-radius: 10px; border: 1px solid var(--line); background: var(--land); }
+.analysis { display: grid; gap: 10px; margin-top: 12px; }
+.meter { height: 6px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.meter i { display: block; height: 100%; width: var(--p, 0%); background: var(--accent); }
+.chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 8px; }
+.chip { flex: none; border: 1px solid var(--line); background: var(--surface); border-radius: 99px; padding: 5px 12px; cursor: pointer; font-weight: 500; font-size: 13.5px; }
+.chip:hover { border-color: var(--accent); }
+.note { border-left: 4px solid var(--moderate); background: color-mix(in srgb, var(--moderate) 12%, var(--surface)); padding: 10px 12px; border-radius: 0 8px 8px 0; font-size: 14px; margin-top: 10px; }
+.complaint { margin-top: 14px; }
+.complaint .lbl { margin-top: 0; }
+
+/* dashboard */
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+.stat .num { font-size: 40px; line-height: 1; }
+.stat .lbl { margin: 6px 0 0; }
+.dash-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.rank { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 4px; }
+.rank-row { width: 100%; display: grid; grid-template-columns: minmax(0, 9.5em) minmax(0, 1fr) auto; gap: 10px; align-items: center; background: transparent; border: 0; padding: 8px 4px; border-radius: 8px; cursor: pointer; text-align: left; }
+.rank-row:hover { background: var(--bg); }
+.rn { font-weight: 600; }
+.bar { height: 10px; background: var(--bg); border-radius: 5px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--severe); border-radius: 5px; }
+.stacked { display: flex; gap: 2px; height: 16px; margin-top: 12px; border-radius: 6px; overflow: hidden; }
+.stacked i, .key i { background: var(--k); }
+.s-rep { --k: var(--s-rep); } .s-ack { --k: var(--s-ack); } .s-prog { --k: var(--s-prog); } .s-fix { --k: var(--s-fix); }
+.key { list-style: none; padding: 0; margin: 12px 0 0; display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13.5px; }
+.key li { display: inline-flex; align-items: center; gap: 6px; }
+.key i { width: 10px; height: 10px; border-radius: 2px; }
+.esc { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 4px; }
+.esc li { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.esc li > div { min-width: 0; flex: 1 1 14em; }
+.thumb-btn { display: block; position: relative; border: 0; background: none; padding: 0; margin-top: 12px; cursor: zoom-in; border-radius: 8px; }
+.thumb-btn .thumb { width: 132px; height: 132px; margin: 0; }
+.thumb-btn span { position: absolute; left: 6px; bottom: 6px; background: color-mix(in srgb, var(--surface) 90%, transparent); border-radius: 99px; padding: 1px 9px; font-size: 11.5px; font-weight: 600; }
+.modal { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: rgba(10, 15, 17, 0.74); padding: 16px; padding-top: calc(16px + env(safe-area-inset-top, 0px)); padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
+.modal-card { position: relative; width: 100%; max-width: 520px; max-height: 100%; overflow: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+#pm-img { display: block; width: 100%; max-height: 58vh; object-fit: contain; background: var(--land); border-radius: 14px 14px 0 0; }
+.pm-body { padding: 14px 16px 16px; }
+.pm-close { position: absolute; top: 8px; right: 8px; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); font-size: 24px; line-height: 1; cursor: pointer; z-index: 1; }
+.footer { margin-top: 28px; font-size: 13px; color: var(--ink-soft); max-width: 70ch; }
+
+@media (max-width: 760px) {
+  .split, .dash-grid { grid-template-columns: minmax(0, 1fr); }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rank-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .rank-row .mono { grid-column: 1 / -1; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand"><h1>PotholeWatch</h1><span>BENGALURU</span></div>
+    <nav class="tabs" id="tabs" aria-label="Sections">
+      <button data-tab="map" aria-selected="true">Map</button>
+      <button data-tab="report" aria-selected="false">Report</button>
+      <button data-tab="dash" aria-selected="false">Dashboard</button>
+    </nav>
+  </header>
+
+  <!-- MAP -->
+  <section id="view-map" class="view" aria-label="Map of reports">
+    <div class="split">
+      <div class="stack">
+        <div class="toolbar">
+          <div class="seg" role="group" aria-label="Map layer">
+            <button id="layer-pins" aria-pressed="true">Pins</button>
+            <button id="layer-heat" aria-pressed="false">Heat map</button>
+          </div>
+          <label><span class="sr">Jump to a locality</span><select id="jump-map"></select></label>
+        </div>
+        <div class="mapbox" id="map-main">
+          <svg role="img" aria-label="Schematic map of Bengaluru with reported road hazards"></svg>
+          <div class="ctrl zoom"><button data-zoom="in" aria-label="Zoom in">+</button><button data-zoom="out" aria-label="Zoom out">&minus;</button><button data-zoom="reset" aria-label="Show whole city" style="font-size:14px">All</button></div>
+          <div class="ctrl legend"><span style="--c:var(--minor)"><i></i>Minor</span><span style="--c:var(--moderate)"><i></i>Moderate</span><span style="--c:var(--severe)"><i></i>Severe</span><span><i class="ring"></i>Fixed</span></div>
+        </div>
+        <p class="hint">Drag to pan, use + and &minus; to zoom (Ctrl + scroll on desktop). Schematic map, roads are approximate.</p>
+      </div>
+      <aside id="detail" class="card detail" aria-live="polite"></aside>
+    </div>
+  </section>
+
+  <!-- REPORT -->
+  <section id="view-report" class="view" hidden aria-label="Report a pothole">
+    <div class="steps">
+      <div class="card step">
+        <h2><span class="n">1</span>Photo</h2>
+        <p class="muted">Take a photo of the pothole from standing height, with the road around it in frame.</p>
+        <div class="row">
+          <label class="btn primary upload">Take or upload photo<input type="file" id="photo" accept="image/*" capture="environment"></label>
+        </div>
+        <p class="lbl">No pothole photo handy? Try a sample</p>
+        <div class="row" style="margin-top:0">
+          <button class="btn ghost sm" data-sample="minor">Minor crack</button>
+          <button class="btn ghost sm" data-sample="moderate">Moderate pothole</button>
+          <button class="btn ghost sm" data-sample="severe">Severe crater</button>
+        </div>
+        <p class="hint" id="photo-msg" role="status" style="margin-top:8px"></p>
+        <div id="preview-wrap" hidden style="margin-top:12px"><canvas id="preview" width="160" height="160" aria-label="Photo preview"></canvas></div>
+        <div class="analysis" id="analysis" hidden>
+          <div>
+            <span class="lbl" style="margin:0 0 6px">Estimated severity</span>
+            <div class="seg" id="sev-seg" role="group" aria-label="Severity">
+              <button data-sev="minor" aria-pressed="false">Minor</button>
+              <button data-sev="moderate" aria-pressed="false">Moderate</button>
+              <button data-sev="severe" aria-pressed="false">Severe</button>
+            </div>
+          </div>
+          <div class="meter" id="ai-meter" aria-hidden="true"><i></i></div>
+          <p class="hint" id="ai-line"></p>
+          <p class="hint">Demo estimate from image statistics. You can change it. A model trained on a pothole dataset replaces this step.</p>
+        </div>
+      </div>
+
+      <div class="card step">
+        <h2><span class="n">2</span>Location</h2>
+        <p class="muted">Use your phone's GPS, or tap the exact spot on the map. Zoom in to place the pin precisely.</p>
+        <div class="row"><button class="btn primary sm" id="btn-geo">Use my GPS location</button></div>
+        <p class="hint" id="geo-msg" role="status" style="margin-top:6px"></p>
+        <div class="chips" id="chips" aria-label="Jump to a locality"></div>
+        <div class="mapbox small" id="map-pick">
+          <svg role="img" aria-label="Map for placing a pin"></svg>
+          <div class="ctrl zoom"><button data-zoom="in" aria-label="Zoom in">+</button><button data-zoom="out" aria-label="Zoom out">&minus;</button><button data-zoom="reset" aria-label="Show whole city" style="font-size:14px">All</button></div>
+        </div>
+        <p class="hint mono" id="coords" style="margin-top:8px">No pin yet</p>
+        <div class="note" id="dup-note" hidden role="status"></div>
+        <label class="lbl" for="addr">Street or landmark</label>
+        <input class="field" id="addr" type="text" placeholder="e.g. 80 Feet Road, opposite the bus stop" autocomplete="off">
+      </div>
+
+      <div class="card step">
+        <h2><span class="n">3</span>Submit</h2>
+        <p class="muted">If a pothole is already reported within 25 m, your report adds a confirmation to it. Confirmations raise its priority.</p>
+        <div class="row"><button class="btn primary" id="submit" disabled>Submit report</button></div>
+        <p class="hint" id="submit-hint" role="status" style="margin-top:8px"></p>
+      </div>
+
+      <div class="card" id="result" hidden aria-live="polite"></div>
+    </div>
+  </section>
+
+  <!-- DASHBOARD -->
+  <section id="view-dash" class="view" hidden aria-label="Dashboard">
+    <div class="stats" id="stats"></div>
+    <div class="dash-grid">
+      <div class="card">
+        <h2 class="h-sm">Worst localities</h2>
+        <p class="muted">Priority points are severity weight (1, 2 or 4) times confirmations, summed over open reports. Select a row to open it on the map.</p>
+        <ol class="rank" id="rank"></ol>
+      </div>
+      <div class="card">
+        <h2 class="h-sm">Report status</h2>
+        <p class="muted">Every report moves from Reported to Fixed.</p>
+        <div class="stacked" id="status-bar"></div>
+        <ul class="key" id="status-key"></ul>
+      </div>
+    </div>
+    <div class="card">
+      <h2 class="h-sm">Past 7 days, still open</h2>
+      <p class="muted">These reports have waited a week or more. Generate an escalation notice that cites the reference number and the days open.</p>
+      <ul class="esc" id="esc-list"></ul>
+      <div id="esc-out"></div>
+    </div>
+    <p class="footer">Prototype for an ideathon. Sample reports are demo data. Reports you add are saved in this browser only. Severity is a demo estimate from simple image statistics, and a trained model replaces it in the full product.</p>
+  </section>
+</div>
+
+<div class="modal" id="photo-modal" hidden role="dialog" aria-modal="true" aria-labelledby="pm-title">
+  <div class="modal-card">
+    <button class="pm-close" id="pm-close" aria-label="Close photo">&times;</button>
+    <img id="pm-img" alt="">
+    <div class="pm-body" id="pm-body"></div>
+  </div>
+</div>
+
+<script>
+/* ---------- Core logic: sample images, severity estimate, geo helpers ---------- */
+function mulberry(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 6371000, rad = Math.PI / 180;
+  const dLat = (lat2 - lat1) * rad, dLng = (lng2 - lng1) * rad;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+/* Procedurally drawn asphalt photos so the demo works without a real pothole picture. */
+function makeSample(kind, n, variant) {
+  const cfg = {
+    severe:   { rx: 0.33, ry: 0.26, wob: 0.16, seed: 11 },
+    moderate: { rx: 0.19, ry: 0.14, wob: 0.20, seed: 23 },
+    minor:    { rx: 0.08, ry: 0.055, wob: 0.25, seed: 5 }
+  }[kind];
+  const v = variant || 0;
+  const sc = v ? 0.88 + ((v * 37) % 25) / 100 : 1;
+  cfg.rx *= sc; cfg.ry *= sc;
+  const r = mulberry(cfg.seed + v * 101);
+  const ph = [r() * 6.28, r() * 6.28, r() * 6.28];
+  const d = new Uint8ClampedArray(n * n * 4);
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) {
+      const nx = x / n - 0.5, ny = y / n - 0.5;
+      const ang = Math.atan2(ny, nx);
+      const rad = Math.hypot(nx / cfg.rx, ny / cfg.ry);
+      const edge = 1 + cfg.wob * (Math.sin(3 * ang + ph[0]) * 0.5 + Math.sin(5 * ang + ph[1]) * 0.3 + Math.sin(7 * ang + ph[2]) * 0.2);
+      let v = 122 + ny * 14 + (r() - 0.5) * 18;
+      if (rad < edge) v = 44 + (r() - 0.5) * 14;
+      else if (rad < edge * 1.12) v -= 28;
+      const i = (y * n + x) * 4;
+      d[i] = v; d[i + 1] = v * 0.98; d[i + 2] = v * 0.94; d[i + 3] = 255;
+    }
+  }
+  return d;
+}
+
+const SEV_T1 = 0.2, SEV_T2 = 0.6;
+
+/* Demo severity estimate from simple image statistics. This is the function a fine-tuned model replaces. */
+function analyzeSeverity(d, n) {
+  const L = new Float32Array(n * n);
+  for (let p = 0; p < n * n; p++) L[p] = 0.299 * d[p * 4] + 0.587 * d[p * 4 + 1] + 0.114 * d[p * 4 + 2];
+  const c0 = Math.floor(n * 0.2), c1 = Math.ceil(n * 0.8);
+  let oSum = 0, oN = 0;
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+    if (x >= c0 && x < c1 && y >= c0 && y < c1) continue;
+    oSum += L[y * n + x]; oN++;
+  }
+  const oMean = oSum / oN, thr = oMean * 0.62;
+  let dark = 0, edge = 0, cN = 0;
+  for (let y = c0; y < c1; y++) for (let x = c0; x < c1; x++) {
+    const v = L[y * n + x]; cN++;
+    if (v < thr) dark++;
+    const g = Math.abs(L[y * n + x + 1] - L[y * n + x - 1]) + Math.abs(L[(y + 1) * n + x] - L[(y - 1) * n + x]);
+    if (g > 60) edge++;
+  }
+  const darkFrac = dark / cN, edgeFrac = edge / cN;
+  const score = Math.min(1, 1.7 * darkFrac + 1.5 * edgeFrac);
+  const severity = score < SEV_T1 ? 'minor' : score < SEV_T2 ? 'moderate' : 'severe';
+  const margin = Math.min(Math.abs(score - SEV_T1), Math.abs(score - SEV_T2));
+  const confidence = 0.55 + Math.min(margin / 0.18, 1) * 0.3;
+  return { severity, confidence, score, darkFrac, edgeFrac };
+}
+
+
+/* ---------- App ---------- */
+(function () {
+  'use strict';
+  const $ = (s, el) => (el || document).querySelector(s);
+  const $$ = (s, el) => Array.from((el || document).querySelectorAll(s));
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  /* Projection: a flat map of Bengaluru, 1 world unit is about 55.7 m */
+  const K = 2000, LAT0 = 13.15, LNG0 = 77.45, COS = Math.cos(13 * Math.PI / 180);
+  const W = 0.35 * COS * K, H = 0.35 * K, M_PER_UNIT = 111320 / K;
+  const proj = (lat, lng) => [(lng - LNG0) * COS * K, (LAT0 - lat) * K];
+  const unproj = (x, y) => [LAT0 - y / K, LNG0 + x / (COS * K)];
+
+  const LOC = [
+    { name: 'Koramangala', lat: 12.9352, lng: 77.6245 },
+    { name: 'Indiranagar', lat: 12.9784, lng: 77.6408 },
+    { name: 'Whitefield', lat: 12.9698, lng: 77.7500 },
+    { name: 'Electronic City', lat: 12.8452, lng: 77.6602 },
+    { name: 'HSR Layout', lat: 12.9116, lng: 77.6474 },
+    { name: 'Hebbal', lat: 13.0358, lng: 77.5970 },
+    { name: 'Silk Board', lat: 12.9177, lng: 77.6228 },
+    { name: 'Marathahalli', lat: 12.9591, lng: 77.6974 },
+    { name: 'Jayanagar', lat: 12.9250, lng: 77.5938 },
+    { name: 'Yelahanka', lat: 13.1007, lng: 77.5963 },
+    { name: 'Bellandur', lat: 12.9304, lng: 77.6784 },
+    { name: 'Majestic', lat: 12.9770, lng: 77.5720 },
+    { name: 'Malleshwaram', lat: 13.0035, lng: 77.5710 },
+    { name: 'Banashankari', lat: 12.9255, lng: 77.5468 }
+  ];
+  /* Approximate alignments, drawn for orientation only */
+  const ROADS = [
+    { name: 'Outer Ring Road', w: 4, label: 2, pts: [[13.0358, 77.597], [13.045, 77.625], [13.01, 77.696], [12.956, 77.701], [12.926, 77.676], [12.9177, 77.6228]] },
+    { name: 'Hosur Road', w: 3, label: 1, pts: [[12.977, 77.572], [12.9177, 77.6228], [12.845, 77.66]] },
+    { name: 'Old Madras Road', w: 3, label: 1, pts: [[12.978, 77.6408], [13.0, 77.696], [12.9698, 77.75]] },
+    { name: 'Bellary Road', w: 3, label: 1, pts: [[12.977, 77.572], [13.0358, 77.597], [13.1007, 77.5963]] },
+    { name: 'Tumkur Road', w: 3, label: 1, pts: [[12.977, 77.572], [13.0035, 77.571], [13.04, 77.52]] },
+    { name: 'Mysore Road', w: 3, label: 1, pts: [[12.977, 77.572], [12.96, 77.52]] }
+  ];
+
+  const SEV = {
+    minor: { label: 'Minor', w: 1, v: '--minor' },
+    moderate: { label: 'Moderate', w: 2, v: '--moderate' },
+    severe: { label: 'Severe', w: 4, v: '--severe' }
+  };
+  const STATUSES = ['Reported', 'Acknowledged', 'In progress', 'Fixed'];
+  const prio = (r) => SEV[r.severity].w * r.conf;
+  const daysOld = (r) => Math.floor((Date.now() - r.created) / 864e5);
+  const fmtAge = (d) => (d === 0 ? 'today' : d === 1 ? '1 day ago' : d + ' days ago');
+  const isOpen = (r) => r.status !== 'Fixed';
+
+  /* Photos: citizen uploads are stored as images; demo reports get an illustrative generated image */
+  const photoCache = new Map();
+  function sampleURL(kind, n, variant) {
+    const c = document.createElement('canvas'); c.width = c.height = n;
+    c.getContext('2d').putImageData(new ImageData(makeSample(kind, n, variant), n, n), 0, 0);
+    try { return c.toDataURL('image/jpeg', 0.82); } catch (e) { return ''; }
+  }
+  function photoFor(r) {
+    if (r.photo && /^data:image\//.test(r.photo)) return r.photo;
+    if (!r.demo) return r.thumb && /^data:image\//.test(r.thumb) ? r.thumb : '';
+    let u = photoCache.get(r.id);
+    if (!u) { u = sampleURL(r.severity, 320, parseInt(r.id.slice(1), 10) || 1); photoCache.set(r.id, u); }
+    return u;
+  }
+
+  function nearestLoc(lat, lng) {
+    let best = LOC[0], bd = Infinity;
+    for (const l of LOC) { const d = haversine(lat, lng, l.lat, l.lng); if (d < bd) { bd = d; best = l; } }
+    return best;
+  }
+
+  /* ---------- Data ---------- */
+  const KEY = 'pwb.v1';
+  let reports = [];
+  function seedReports() {
+    const r = mulberry(7), now = Date.now(), out = [];
+    const plan = { 'Koramangala': [3, 0.5], 'Silk Board': [3, 0.75], 'Marathahalli': [3, 0.55], 'Electronic City': [2, 0.5], 'Whitefield': [2, 0.4], 'HSR Layout': [2, 0.35], 'Indiranagar': [2, 0.3], 'Hebbal': [2, 0.5], 'Jayanagar': [2, 0.25], 'Yelahanka': [1, 0.3], 'Bellandur': [2, 0.55], 'Majestic': [2, 0.4], 'Malleshwaram': [1, 0.2], 'Banashankari': [1, 0.3] };
+    const streets = ['1st Main Road', '5th Cross', '80 Feet Road', 'Service Road', 'Double Road', 'Link Road'];
+    let i = 0;
+    for (const l of LOC) {
+      const [count, bias] = plan[l.name];
+      for (let k = 0; k < count; k++) {
+        i++;
+        const x = r() * 0.7 + bias * 0.5;
+        const severity = x > 0.78 ? 'severe' : x > 0.46 ? 'moderate' : 'minor';
+        const age = Math.floor(r() * 22);
+        let status = 'Reported';
+        const roll = r();
+        if (age > 14 && roll < 0.4) status = 'Fixed';
+        else if (age > 7 && roll < 0.5) status = roll < 0.25 ? 'In progress' : 'Acknowledged';
+        out.push({
+          id: 'D' + String(i).padStart(2, '0'),
+          lat: l.lat + (r() - 0.5) * 0.012, lng: l.lng + (r() - 0.5) * 0.012,
+          locality: l.name, address: streets[Math.floor(r() * streets.length)] + ', ' + l.name,
+          severity, confidence: 0.6 + r() * 0.25, score: 0, conf: 1 + Math.floor(r() * r() * 14) + (severity === 'severe' ? Math.floor(r() * 4) : 0),
+          status, created: now - age * 864e5 - Math.floor(r() * 36e5 * 10), demo: true, thumb: null
+        });
+      }
+    }
+    return out;
+  }
+  function loadReports() {
+    reports = seedReports();
+    try {
+      const s = JSON.parse(localStorage.getItem(KEY) || '{}');
+      if (s.edits) reports.forEach((r) => { const e = s.edits[r.id]; if (e) { r.status = e.status; r.conf = e.conf; } });
+      if (Array.isArray(s.user)) reports.push(...s.user);
+    } catch (e) { /* storage unavailable */ }
+  }
+  function saveReports() {
+    const edits = {};
+    reports.forEach((r) => { if (r.demo) edits[r.id] = { status: r.status, conf: r.conf }; });
+    const user = reports.filter((r) => !r.demo);
+    try { localStorage.setItem(KEY, JSON.stringify({ user, edits })); }
+    catch (e) {
+      /* storage full or unavailable: retry without the large photos */
+      try { localStorage.setItem(KEY, JSON.stringify({ user: user.map((r) => Object.assign({}, r, { photo: null })), edits })); } catch (e2) { /* give up */ }
+    }
+  }
+  const byId = (id) => reports.find((r) => r.id === id);
+  function findDup(lat, lng) {
+    let best = null, bd = 25.0001;
+    for (const r of reports) {
+      if (!isOpen(r)) continue;
+      const d = haversine(lat, lng, r.lat, r.lng);
+      if (d < bd) { bd = d; best = r; }
+    }
+    return best ? { r: best, d: bd } : null;
+  }
+
+  /* ---------- Complaint text ---------- */
+  function complaintText(r, escalate) {
+    const when = new Date(r.created).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+    const sev = SEV[r.severity].label.toLowerCase();
+    const link = 'https://www.google.com/maps?q=' + r.lat.toFixed(6) + ',' + r.lng.toFixed(6);
+    const facts = 'Location: ' + r.address + ', Bengaluru\nCoordinates: ' + r.lat.toFixed(6) + ', ' + r.lng.toFixed(6) + '\nMap link: ' + link +
+      '\nSeverity: ' + SEV[r.severity].label + ' (estimated from the submitted photo)\nCitizen confirmations: ' + r.conf + '\nCurrent status: ' + r.status;
+    if (!escalate) {
+      return 'To,\nThe Commissioner\nGreater Bengaluru Authority (formerly BBMP)\n\nSubject: Request to repair a ' + sev + ' road hazard (pothole) at ' + r.address + '\nReference: ' + r.id +
+        '\n\nSir/Madam,\n\nA ' + sev + ' pothole was reported through PotholeWatch Bengaluru on ' + when + '. The details are below.\n\n' + facts +
+        '\n\nThis hazard puts two-wheeler riders, pedestrians and other road users at risk, especially at night and in the rain. We request an inspection and repair at the earliest, and an update on the action taken against reference ' + r.id + '.\n\nThank you.\nA concerned citizen';
+    }
+    const d = daysOld(r);
+    return 'To,\nThe Zonal Commissioner / Executive Engineer (Roads)\nGreater Bengaluru Authority (formerly BBMP)\n\nSubject: Escalation of unresolved pothole complaint ' + r.id + ' (open for ' + d + ' days)\n\nSir/Madam,\n\nComplaint ' + r.id +
+      ' about a ' + sev + ' pothole at ' + r.address + ' was first reported on ' + when + ' and is still marked "' + r.status + '" after ' + d + ' days. It has since been confirmed by ' + r.conf + ' citizens.\n\n' + facts +
+      '\n\nWe request that this complaint be escalated to the officer responsible for repairs on this stretch, and that the repair date and current status be shared against reference ' + r.id + '.\n\nThank you.\nPotholeWatch Bengaluru';
+  }
+  function complaintCard(r, escalate) {
+    const id = 'ta' + Math.random().toString(36).slice(2, 8);
+    const link = 'https://www.google.com/maps?q=' + r.lat.toFixed(6) + ',' + r.lng.toFixed(6);
+    return '<div class="complaint"><label class="lbl" for="' + id + '">' + (escalate ? 'Escalation notice' : 'Complaint letter') + '</label>' +
+      '<textarea id="' + id + '" readonly rows="13">' + esc(complaintText(r, escalate)) + '</textarea>' +
+      '<div class="row"><button class="btn primary" data-copy="' + id + '">Copy text</button><a class="btn ghost" href="' + link + '" target="_blank" rel="noopener">Open in Google Maps</a></div></div>';
+  }
+  function flash(btn, text) {
+    const old = btn.dataset.label || btn.textContent;
+    btn.dataset.label = old; btn.textContent = text;
+    clearTimeout(btn._t); btn._t = setTimeout(() => { btn.textContent = old; }, 1800);
+  }
+  document.addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-copy]');
+    if (!b) return;
+    const ta = document.getElementById(b.dataset.copy);
+    try { await navigator.clipboard.writeText(ta.value); flash(b, 'Copied'); }
+    catch (err) { ta.focus(); ta.select(); flash(b, 'Selected, press Ctrl+C'); }
+  });
+
+  /* ---------- Map ---------- */
+  let uid = 0;
+  function createMap(host, opt) {
+    const id = ++uid, svg = $('svg', host);
+    const view = { cx: W / 2, cy: H / 2, z: 1 };
+    const st = { scale: 1, sc0: 1, x0: 0, y0: 0, vw: W, vh: H };
+
+    function render() {
+      const rect = host.getBoundingClientRect();
+      const dw = rect.width || 360, dh = rect.height || 340;
+      st.sc0 = Math.min(dw / W, dh / H);
+      st.scale = st.sc0 * view.z;
+      st.vw = dw / st.scale; st.vh = dh / st.scale;
+      view.cx = Math.max(0, Math.min(W, view.cx)); view.cy = Math.max(0, Math.min(H, view.cy));
+      st.x0 = view.cx - st.vw / 2; st.y0 = view.cy - st.vh / 2;
+      svg.setAttribute('viewBox', st.x0 + ' ' + st.y0 + ' ' + st.vw + ' ' + st.vh);
+      const px = (n) => n / st.scale;
+      const f = (n) => n.toFixed(2);
+      let s = '<defs><radialGradient id="hg' + id + '"><stop offset="0" style="stop-color:var(--heat);stop-opacity:.6"/><stop offset="1" style="stop-color:var(--heat);stop-opacity:0"/></radialGradient></defs>';
+      s += '<rect x="' + (-W) + '" y="' + (-H) + '" width="' + 3 * W + '" height="' + 3 * H + '" style="fill:var(--land)"/>';
+      for (const rd of ROADS) {
+        const pts = rd.pts.map((p) => proj(p[0], p[1]).map(f).join(',')).join(' ');
+        s += '<polyline points="' + pts + '" fill="none" style="stroke:var(--road-edge)" stroke-width="' + (rd.w + 2.5) + '" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>';
+        s += '<polyline points="' + pts + '" fill="none" style="stroke:var(--road)" stroke-width="' + rd.w + '" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>';
+      }
+      if (view.z < 3.5) {
+        for (const rd of ROADS) {
+          const p = rd.pts[rd.label];
+          const q = proj(p[0], p[1]);
+          s += '<text class="maplabel road" x="' + f(q[0] + px(6)) + '" y="' + f(q[1] - px(6)) + '" font-size="' + px(9.5) + '" stroke-width="' + px(3) + '">' + esc(rd.name) + '</text>';
+        }
+      }
+      if (view.z < 9) {
+        for (const l of LOC) {
+          const q = proj(l.lat, l.lng);
+          s += '<rect x="' + f(q[0] - px(2.5)) + '" y="' + f(q[1] - px(2.5)) + '" width="' + px(5) + '" height="' + px(5) + '" style="fill:var(--ink-soft)"/>';
+          s += '<text class="maplabel" x="' + f(q[0] + px(6)) + '" y="' + f(q[1] + px(4)) + '" font-size="' + px(11) + '" stroke-width="' + px(3) + '">' + esc(l.name) + '</text>';
+        }
+      }
+      const list = opt.getReports().slice().sort((a, b) => prio(a) - prio(b));
+      const heat = opt.heat && opt.heat();
+      if (heat) {
+        for (const r of list) {
+          if (!isOpen(r)) continue;
+          const q = proj(r.lat, r.lng);
+          s += '<circle cx="' + f(q[0]) + '" cy="' + f(q[1]) + '" r="' + px(30 + SEV[r.severity].w * 9 + Math.min(r.conf, 10) * 1.5) + '" fill="url(#hg' + id + ')"/>';
+        }
+      }
+      const sel = opt.getSelected && opt.getSelected();
+      for (const r of list) {
+        const q = proj(r.lat, r.lng), open = isOpen(r);
+        const rad = px(heat ? 3.5 : 5.5 + Math.min(r.conf, 8) * 0.7);
+        const col = 'var(' + SEV[r.severity].v + ')';
+        s += '<g data-id="' + r.id + '" style="cursor:pointer">';
+        if (sel === r.id) s += '<circle cx="' + f(q[0]) + '" cy="' + f(q[1]) + '" r="' + (rad + px(5)) + '" fill="none" style="stroke:var(--accent)" stroke-width="2.5" vector-effect="non-scaling-stroke"/>';
+        if (open) s += '<circle cx="' + f(q[0]) + '" cy="' + f(q[1]) + '" r="' + rad + '" style="fill:' + col + ';stroke:var(--surface)" stroke-width="2" vector-effect="non-scaling-stroke"/>';
+        else s += '<circle cx="' + f(q[0]) + '" cy="' + f(q[1]) + '" r="' + rad + '" style="fill:var(--surface);stroke:' + col + '" stroke-width="2.5" vector-effect="non-scaling-stroke"/>';
+        s += '<circle cx="' + f(q[0]) + '" cy="' + f(q[1]) + '" r="' + px(15) + '" fill="transparent"/></g>';
+      }
+      const pin = opt.getPin && opt.getPin();
+      if (pin) {
+        const q = proj(pin.lat, pin.lng);
+        const dupR = 25 / M_PER_UNIT;
+        if (pin.acc) {
+          const accR = pin.acc / M_PER_UNIT;
+          if (accR * st.scale >= 12) s += '<circle cx="' + f(q[0]) + '" cy="' + f(q[1]) + '" r="' + accR + '" style="fill:var(--accent);fill-opacity:.08;stroke:var(--accent)" stroke-width="1" stroke-dasharray="2 3" vector-effect="non-scaling-stroke"/>';
+        }
+        if (dupR * st.scale >= 6) s += '<circle cx="' + f(q[0]) + '" cy="' + f(q[1]) + '" r="' + dupR + '" fill="none" style="stroke:var(--accent)" stroke-width="1.5" stroke-dasharray="5 4" vector-effect="non-scaling-stroke"/>';
+        s += '<circle cx="' + f(q[0]) + '" cy="' + f(q[1]) + '" r="' + px(10) + '" style="fill:var(--accent);fill-opacity:.2;stroke:var(--accent)" stroke-width="2.5" vector-effect="non-scaling-stroke"/>';
+        s += '<circle cx="' + f(q[0]) + '" cy="' + f(q[1]) + '" r="' + px(3) + '" style="fill:var(--accent)"/>';
+      }
+      svg.innerHTML = s;
+    }
+
+    function zoomAt(factor, cx, cy) {
+      const rect = host.getBoundingClientRect();
+      const ox = cx - rect.left, oy = cy - rect.top;
+      const wx = st.x0 + ox / st.scale, wy = st.y0 + oy / st.scale;
+      view.z = Math.max(1, Math.min(18, view.z * factor));
+      const sc = st.sc0 * view.z, vw = rect.width / sc, vh = rect.height / sc;
+      view.cx = wx - ox / sc + vw / 2; view.cy = wy - oy / sc + vh / 2;
+      render();
+    }
+    function flyTo(lat, lng, z) {
+      const p = proj(lat, lng); view.cx = p[0]; view.cy = p[1]; view.z = z || 8; render();
+    }
+    function toLatLng(cx, cy) {
+      const rect = host.getBoundingClientRect();
+      return unproj(st.x0 + (cx - rect.left) / st.scale, st.y0 + (cy - rect.top) / st.scale);
+    }
+    function tap(e) {
+      if (opt.mode === 'pick') { const p = toLatLng(e.clientX, e.clientY); opt.onPick(p[0], p[1]); return; }
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const g = el && el.closest ? el.closest('[data-id]') : null;
+      opt.onSelect(g ? g.getAttribute('data-id') : null);
+    }
+
+    const ptrs = new Map(); let moved = 0, lastDist = 0;
+    const dist = () => { const a = Array.from(ptrs.values()); return Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y); };
+    host.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('.ctrl')) return;
+      try { host.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+      ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (ptrs.size === 1) moved = 0;
+      if (ptrs.size === 2) lastDist = dist();
+    });
+    host.addEventListener('pointermove', (e) => {
+      const p = ptrs.get(e.pointerId);
+      if (!p) return;
+      const dx = e.clientX - p.x, dy = e.clientY - p.y;
+      p.x = e.clientX; p.y = e.clientY;
+      if (ptrs.size === 1) {
+        moved += Math.abs(dx) + Math.abs(dy);
+        if (moved > 6) { view.cx -= dx / st.scale; view.cy -= dy / st.scale; render(); }
+      } else if (ptrs.size === 2) {
+        const d = dist(), a = Array.from(ptrs.values());
+        if (lastDist > 0) zoomAt(d / lastDist, (a[0].x + a[1].x) / 2, (a[0].y + a[1].y) / 2);
+        lastDist = d; moved = 99;
+      }
+    });
+    const end = (e, allowTap) => {
+      const was = ptrs.size; ptrs.delete(e.pointerId);
+      if (allowTap && was === 1 && moved <= 6) tap(e);
+    };
+    host.addEventListener('pointerup', (e) => end(e, true));
+    host.addEventListener('pointercancel', (e) => end(e, false));
+    host.addEventListener('wheel', (e) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      e.preventDefault(); zoomAt(e.deltaY < 0 ? 1.25 : 0.8, e.clientX, e.clientY);
+    }, { passive: false });
+    $$('[data-zoom]', host).forEach((b) => b.addEventListener('click', () => {
+      const rect = host.getBoundingClientRect(), z = b.dataset.zoom;
+      if (z === 'reset') { view.cx = W / 2; view.cy = H / 2; view.z = 1; render(); }
+      else zoomAt(z === 'in' ? 1.6 : 0.625, rect.left + rect.width / 2, rect.top + rect.height / 2);
+    }));
+    if (window.ResizeObserver) new ResizeObserver(() => render()).observe(host);
+    return { render, flyTo };
+  }
+
+  /* ---------- Map tab ---------- */
+  let selectedId = null, heatOn = false;
+  const mainMap = createMap($('#map-main'), {
+    mode: 'browse', getReports: () => reports, heat: () => heatOn, getSelected: () => selectedId,
+    onSelect: (id) => { selectedId = id; mainMap.render(); renderDetail(); if (id) openPhoto(id); }
+  });
+  $('#layer-pins').addEventListener('click', () => setHeat(false));
+  $('#layer-heat').addEventListener('click', () => setHeat(true));
+  function setHeat(on) {
+    heatOn = on;
+    $('#layer-pins').setAttribute('aria-pressed', String(!on));
+    $('#layer-heat').setAttribute('aria-pressed', String(on));
+    mainMap.render();
+  }
+  const jump = $('#jump-map');
+  jump.innerHTML = '<option value="">Jump to a locality</option>' + LOC.map((l, i) => '<option value="' + i + '">' + esc(l.name) + '</option>').join('');
+  jump.addEventListener('change', () => { if (jump.value !== '') { const l = LOC[+jump.value]; mainMap.flyTo(l.lat, l.lng, 8); } });
+
+  function renderDetail() {
+    const box = $('#detail'), r = byId(selectedId);
+    if (!r) {
+      const open = reports.filter(isOpen);
+      box.innerHTML = '<h2 class="h-sm">City overview</h2><p class="big"><span class="num">' + open.length + '</span> open reports, <span class="num">' + open.filter((x) => x.severity === 'severe').length + '</span> severe</p>' +
+        '<p class="muted">Select a pin to see who confirmed it, its status and the complaint letter. Larger pins have more confirmations. Ringed pins are fixed.</p>' +
+        '<button class="btn primary" data-go="report">Report a pothole</button>';
+      return;
+    }
+    const sev = SEV[r.severity];
+    const pu = photoFor(r);
+    const photo = pu ? '<button class="thumb-btn" data-act="photo" aria-label="View larger photo"><img class="thumb" src="' + pu + '" alt="Photo of this pothole"><span>View photo</span></button>' : '<div class="thumb ph">No photo</div>';
+    box.innerHTML = '<div class="d-head"><span class="pill" style="--c:var(' + sev.v + ')"><i></i>' + sev.label + '</span><span class="mono">' + esc(r.id) + '</span></div>' +
+      '<h2 class="h-sm">' + esc(r.address) + '</h2><p class="muted">' + esc(r.locality) + ' · reported ' + fmtAge(daysOld(r)) + (r.demo ? ' · demo data' : '') + '</p>' + photo +
+      '<dl class="facts"><div><dt>Confirmations</dt><dd>' + r.conf + '</dd></div><div><dt>Priority score</dt><dd>' + prio(r) + '</dd></div><div><dt>Status</dt><dd>' + esc(r.status) + '</dd></div></dl>' +
+      '<div class="row"><button class="btn primary" data-act="confirm">I see this too (+1)</button><button class="btn ghost" data-act="letter">Complaint letter</button></div>' +
+      '<div id="d-letter"></div>' +
+      '<p class="lbl">Authority view (demo): update status</p><div class="seg wrap" role="group" aria-label="Report status">' +
+      STATUSES.map((x) => '<button data-status="' + x + '" aria-pressed="' + (x === r.status) + '">' + x + '</button>').join('') + '</div>';
+  }
+  $('#detail').addEventListener('click', (e) => {
+    const r = byId(selectedId);
+    if (!r) return;
+    const t = e.target.closest('button');
+    if (!t) return;
+    if (t.dataset.act === 'photo') openPhoto(r.id);
+    if (t.dataset.act === 'confirm') { r.conf++; saveReports(); mainMap.render(); renderDetail(); }
+    if (t.dataset.act === 'letter') { const l = $('#d-letter'); l.innerHTML = l.innerHTML ? '' : complaintCard(r, false); }
+    if (t.dataset.status) { r.status = t.dataset.status; saveReports(); mainMap.render(); renderDetail(); }
+  });
+
+  /* ---------- Report tab ---------- */
+  const draft = { thumb: null, photo: null, auto: null, sev: null, lat: null, lng: null, acc: null, addrTouched: false };
+  let autoTried = false, geoT = null;
+  const photoMsg = $('#photo-msg');
+  const say = (el, t) => { el.textContent = t; };
+
+  function analyseCanvas(ctx, n, big) {
+    const img = ctx.getImageData(0, 0, n, n);
+    const res = analyzeSeverity(img.data, n);
+    draft.auto = res; draft.sev = res.severity; draft.photo = big || null;
+    try {
+      const c = document.createElement('canvas'); c.width = c.height = 96;
+      c.getContext('2d').drawImage($('#preview'), 0, 0, 96, 96);
+      draft.thumb = c.toDataURL('image/jpeg', 0.6);
+    } catch (e) { draft.thumb = null; }
+    showAnalysis(); updateSubmit();
+    if (draft.lat === null && !autoTried) { autoTried = true; useGps(true); }
+  }
+  function showAnalysis() {
+    const a = draft.auto; if (!a) return;
+    $('#analysis').hidden = false; $('#preview-wrap').hidden = false;
+    $('#ai-line').textContent = 'Estimate: ' + SEV[a.severity].label + ', ' + Math.round(a.confidence * 100) + '% confidence. A dark, rough area covers ' + Math.round(a.darkFrac * 100) + '% of the centre of the frame.';
+    $$('#sev-seg button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.sev === draft.sev)));
+    $('#ai-meter').style.setProperty('--p', Math.round(a.confidence * 100) + '%');
+  }
+  $('#sev-seg').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    draft.sev = b.dataset.sev; showAnalysis(); updateSubmit();
+  });
+  $('#photo').addEventListener('change', () => {
+    const f = $('#photo').files[0]; if (!f) return;
+    if (!/^image\//.test(f.type)) { say(photoMsg, 'That file is not an image. Choose a JPG or PNG photo.'); return; }
+    if (f.size > 8 * 1024 * 1024) { say(photoMsg, 'That photo is larger than 8 MB. Choose a smaller one.'); return; }
+    const url = URL.createObjectURL(f), img = new Image();
+    img.onload = () => {
+      const n = 160, cv = $('#preview'), ctx = cv.getContext('2d', { willReadFrequently: true });
+      cv.width = cv.height = n;
+      const s = Math.min(img.naturalWidth, img.naturalHeight);
+      ctx.drawImage(img, (img.naturalWidth - s) / 2, (img.naturalHeight - s) / 2, s, s, 0, 0, n, n);
+      let big = null;
+      try {
+        const k = Math.min(1, 720 / Math.max(img.naturalWidth, img.naturalHeight)), c = document.createElement('canvas');
+        c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); big = c.toDataURL('image/jpeg', 0.7);
+      } catch (e) { big = null; }
+      URL.revokeObjectURL(url); say(photoMsg, 'Photo loaded.'); analyseCanvas(ctx, n, big);
+    };
+    img.onerror = () => { say(photoMsg, 'This photo could not be read. Try another one.'); };
+    img.src = url;
+  });
+  $$('[data-sample]').forEach((b) => b.addEventListener('click', () => {
+    const n = 160, cv = $('#preview'), ctx = cv.getContext('2d', { willReadFrequently: true });
+    cv.width = cv.height = n;
+    ctx.putImageData(new ImageData(makeSample(b.dataset.sample, n), n, n), 0, 0);
+    say(photoMsg, 'Sample photo loaded.'); analyseCanvas(ctx, n, sampleURL(b.dataset.sample, 360, 0));
+  }));
+
+  const pickMap = createMap($('#map-pick'), {
+    mode: 'pick', getReports: () => reports, getPin: () => (draft.lat === null ? null : { lat: draft.lat, lng: draft.lng, acc: draft.acc }),
+    onPick: (lat, lng) => setPin(lat, lng)
+  });
+  $('#chips').innerHTML = LOC.map((l, i) => '<button class="chip" data-i="' + i + '">' + esc(l.name) + '</button>').join('');
+  $('#chips').addEventListener('click', (e) => { const b = e.target.closest('.chip'); if (b) { const l = LOC[+b.dataset.i]; pickMap.flyTo(l.lat, l.lng, 8); } });
+
+  async function reverseGeocode(lat, lng) {
+    try {
+      const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 6000);
+      const res = await fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&lat=' + lat + '&lon=' + lng, { signal: ctl.signal });
+      clearTimeout(t);
+      if (!res.ok) return;
+      const a = (await res.json()).address || {};
+      const parts = [a.road || a.pedestrian || a.neighbourhood, a.suburb || a.neighbourhood || a.city_district].filter(Boolean);
+      if (parts.length && !draft.addrTouched && draft.lat === lat && draft.lng === lng) $('#addr').value = Array.from(new Set(parts)).join(', ');
+    } catch (e) { /* offline or blocked: keep the "Near ..." text */ }
+  }
+  function setPin(lat, lng, acc) {
+    draft.lat = lat; draft.lng = lng; draft.acc = acc || null;
+    const loc = nearestLoc(lat, lng);
+    if (!draft.addrTouched) $('#addr').value = 'Near ' + loc.name;
+    const dup = findDup(lat, lng), note = $('#dup-note');
+    if (dup) { note.hidden = false; note.textContent = 'A ' + SEV[dup.r.severity].label.toLowerCase() + ' pothole is already reported ' + Math.round(dup.d) + ' m from this pin, with ' + dup.r.conf + ' confirmations. Submitting adds your confirmation to it instead of creating a duplicate.'; }
+    else { note.hidden = true; }
+    $('#coords').textContent = lat.toFixed(5) + ', ' + lng.toFixed(5) + ' · ' + loc.name;
+    pickMap.render(); updateSubmit();
+    clearTimeout(geoT); geoT = setTimeout(() => reverseGeocode(lat, lng), 700);
+  }
+  $('#addr').addEventListener('input', () => { draft.addrTouched = true; });
+  function useGps(auto) {
+    const m = $('#geo-msg'), btn = $('#btn-geo');
+    const tell = (t) => say(m, auto ? '' : t);
+    if (!navigator.geolocation) { tell('This browser does not support location. Tap the map to drop a pin instead.'); return; }
+    if (window.isSecureContext === false) { tell('Location needs a secure page. Open the https link instead of a local file, or tap the map to drop a pin.'); return; }
+    say(m, 'Getting your location...'); btn.disabled = true;
+    const onFail = (err) => {
+      btn.disabled = false;
+      if (err && err.code === 1) tell('Location permission is blocked. Allow location for this site in your browser, or tap the map to drop a pin.');
+      else if (err && err.code === 3) tell('Location took too long. Move to open sky and try again, or tap the map to drop a pin.');
+      else tell('Location is not available here. Tap the map to drop a pin instead.');
+    };
+    try {
+      navigator.geolocation.getCurrentPosition((p) => {
+        btn.disabled = false;
+        const la = p.coords.latitude, ln = p.coords.longitude, acc = Math.max(1, Math.round(p.coords.accuracy || 0));
+        if (la < 12.75 || la > 13.25 || ln < 77.35 || ln > 77.9) { say(m, 'Your location is outside Bengaluru, so it cannot be shown on this map. Tap the map to drop a pin instead.'); return; }
+        say(m, 'Location found, accurate to about ' + acc + ' m.' + (acc > 50 ? ' Zoom in and tap to move the pin if it looks off.' : ''));
+        pickMap.flyTo(la, ln, acc > 100 ? 10 : 13); setPin(la, ln, acc);
+      }, onFail, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+    } catch (e) { onFail(null); }
+  }
+  $('#btn-geo').addEventListener('click', () => useGps(false));
+
+  function updateSubmit() {
+    const miss = [];
+    if (!draft.auto) miss.push('a photo');
+    if (draft.lat === null) miss.push('a location pin');
+    $('#submit').disabled = miss.length > 0;
+    $('#submit-hint').textContent = miss.length ? 'Add ' + miss.join(' and ') + ' to continue.' : 'Ready to submit.';
+  }
+  $('#submit').addEventListener('click', () => {
+    if (!draft.auto || draft.lat === null) return;
+    const near = findDup(draft.lat, draft.lng);
+    let target, dup = false;
+    if (near) { near.r.conf++; target = near.r; dup = true; }
+    else {
+      const loc = nearestLoc(draft.lat, draft.lng);
+      target = {
+        id: 'PWB-' + Date.now().toString(36).toUpperCase().slice(-6), lat: draft.lat, lng: draft.lng, locality: loc.name,
+        address: $('#addr').value.trim() || 'Near ' + loc.name, severity: draft.sev, confidence: draft.auto.confidence, score: draft.auto.score,
+        conf: 1, status: 'Reported', created: Date.now(), demo: false, thumb: draft.thumb, photo: draft.photo
+      };
+      reports.push(target);
+    }
+    saveReports(); mainMap.render(); renderDetail();
+    $('#result').hidden = false;
+    $('#result').innerHTML = '<h2 class="h-sm">' + (dup ? 'Already reported, confirmation added' : 'Report filed') + '</h2>' +
+      '<p class="muted">' + (dup ? 'A pothole already exists within 25 m, so it now has ' + target.conf + ' confirmations. More confirmations raise its priority.' : 'Reference ' + esc(target.id) + '. It now appears on the map for everyone in your area.') + '</p>' +
+      complaintCard(target, false) +
+      '<div class="row"><button class="btn primary" id="view-on-map">View on map</button><button class="btn ghost" id="another">Report another</button></div>';
+    $('#result').scrollIntoView({ block: 'start' });
+    $('#view-on-map').onclick = () => { selectedId = target.id; show('map'); mainMap.flyTo(target.lat, target.lng, 9); renderDetail(); };
+    $('#another').onclick = resetDraft;
+  });
+  function resetDraft() {
+    Object.assign(draft, { thumb: null, photo: null, auto: null, sev: null, lat: null, lng: null, acc: null, addrTouched: false });
+    autoTried = false;
+    $('#photo').value = ''; $('#analysis').hidden = true; $('#preview-wrap').hidden = true; $('#result').hidden = true;
+    $('#addr').value = ''; $('#dup-note').hidden = true; $('#coords').textContent = 'No pin yet'; say(photoMsg, ''); say($('#geo-msg'), '');
+    pickMap.render(); updateSubmit(); window.scrollTo({ top: 0 });
+  }
+
+  /* ---------- Dashboard ---------- */
+  function renderDash() {
+    const open = reports.filter(isOpen);
+    const avg = open.length ? open.reduce((a, r) => a + daysOld(r), 0) / open.length : 0;
+    const due = open.filter((r) => daysOld(r) >= 7).sort((a, b) => prio(b) - prio(a));
+    $('#stats').innerHTML = [
+      ['Open reports', open.length], ['Severe and open', open.filter((r) => r.severity === 'severe').length],
+      ['Average days open', avg.toFixed(1)], ['Past 7 days', due.length]
+    ].map((x) => '<div class="stat"><div class="num">' + x[1] + '</div><div class="lbl">' + x[0] + '</div></div>').join('');
+
+    const agg = {};
+    open.forEach((r) => { const a = agg[r.locality] || (agg[r.locality] = { n: 0, p: 0 }); a.n++; a.p += prio(r); });
+    const top = Object.entries(agg).sort((a, b) => b[1].p - a[1].p).slice(0, 5), mx = top.length ? top[0][1].p : 1;
+    $('#rank').innerHTML = top.map((t, i) => '<li><button class="rank-row" data-loc="' + esc(t[0]) + '"><span class="rn">' + esc(t[0]) + '</span><span class="bar"><i style="width:' + Math.max(6, Math.round(t[1].p / mx * 100)) + '%"></i></span><span class="mono">' + t[1].p + ' pts · ' + t[1].n + ' open</span></button></li>').join('');
+
+    const cnt = STATUSES.map((s) => reports.filter((r) => r.status === s).length), tot = reports.length || 1;
+    const cls = ['s-rep', 's-ack', 's-prog', 's-fix'];
+    $('#status-bar').innerHTML = cnt.map((c, i) => c ? '<i class="' + cls[i] + '" style="flex:' + c + '" title="' + STATUSES[i] + ': ' + c + '"></i>' : '').join('');
+    $('#status-key').innerHTML = STATUSES.map((s, i) => '<li><i class="' + cls[i] + '"></i>' + s + ' <span class="mono">' + cnt[i] + '</span></li>').join('');
+
+    $('#esc-list').innerHTML = due.length ? due.slice(0, 5).map((r) => '<li><div><strong>' + esc(r.address) + '</strong><div class="muted">' + daysOld(r) + ' days open · ' + r.conf + ' confirmations · ' + esc(r.status) + '</div></div><button class="btn ghost sm" data-esc="' + r.id + '">Escalation notice</button></li>').join('') : '<li class="muted">Nothing is past 7 days.</li>';
+    $('#esc-out').innerHTML = '';
+  }
+  $('#rank').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-loc]'); if (!b) return;
+    const l = LOC.find((x) => x.name === b.dataset.loc); show('map'); mainMap.flyTo(l.lat, l.lng, 8);
+  });
+  $('#esc-list').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-esc]'); if (!b) return;
+    $('#esc-out').innerHTML = complaintCard(byId(b.dataset.esc), true);
+  });
+
+  /* ---------- Photo popup ---------- */
+  const modal = $('#photo-modal');
+  let pmId = null, pmOpenedAt = 0;
+  function renderPhotoBody() {
+    const r = byId(pmId); if (!r) return;
+    const sev = SEV[r.severity];
+    $('#pm-body').innerHTML = '<div class="d-head"><span class="pill" style="--c:var(' + sev.v + ')"><i></i>' + sev.label + '</span><span class="mono">' + esc(r.id) + '</span></div>' +
+      '<h2 class="h-sm" id="pm-title">' + esc(r.address) + '</h2><p class="muted">' + esc(r.locality) + ' · reported ' + fmtAge(daysOld(r)) + ' · ' + r.conf + ' confirmation' + (r.conf === 1 ? '' : 's') + '</p>' +
+      '<p class="hint" style="margin-top:8px">' + (r.demo ? 'Illustrative sample image, not a real citizen photo.' : 'Photo uploaded by the citizen who reported this.') + '</p>' +
+      '<div class="row"><button class="btn primary" data-pm="confirm">I see this too (+1)</button><button class="btn ghost" data-pm="close">Close</button></div>';
+  }
+  function openPhoto(id) {
+    const r = byId(id); if (!r) return;
+    pmId = id; pmOpenedAt = Date.now();
+    const u = photoFor(r), img = $('#pm-img');
+    img.hidden = !u;
+    if (u) { img.src = u; img.alt = 'Photo of a ' + SEV[r.severity].label.toLowerCase() + ' pothole at ' + r.address; }
+    renderPhotoBody(); modal.hidden = false; $('#pm-close').focus();
+  }
+  function closePhoto() { modal.hidden = true; pmId = null; }
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) { if (Date.now() - pmOpenedAt > 350) closePhoto(); return; }
+    const b = e.target.closest('[data-pm]');
+    if (!b) return;
+    if (b.dataset.pm === 'close') closePhoto();
+    if (b.dataset.pm === 'confirm') { const r = byId(pmId); if (r) { r.conf++; saveReports(); mainMap.render(); renderDetail(); renderPhotoBody(); } }
+  });
+  $('#pm-close').addEventListener('click', closePhoto);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !modal.hidden) closePhoto(); });
+
+  /* ---------- Tabs ---------- */
+  function show(tab) {
+    closePhoto();
+    ['map', 'report', 'dash'].forEach((t) => { $('#view-' + t).hidden = t !== tab; });
+    $$('#tabs button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));
+    requestAnimationFrame(() => { if (tab === 'map') mainMap.render(); if (tab === 'report') pickMap.render(); });
+    if (tab === 'dash') renderDash();
+    if (tab === 'map') renderDetail();
+    window.scrollTo({ top: 0 });
+  }
+  $$('#tabs button').forEach((b) => b.addEventListener('click', () => show(b.dataset.tab)));
+  document.addEventListener('click', (e) => { const g = e.target.closest('[data-go]'); if (g) show(g.dataset.go === 'dash' ? 'dash' : g.dataset.go); });
+
+  loadReports(); updateSubmit(); renderDetail(); show('map');
+})();
+</script>
+</body>
+</html>
